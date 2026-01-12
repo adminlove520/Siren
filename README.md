@@ -1,11 +1,11 @@
-# MissAvPuser - Discord 视频通知机器人
+# Siren - Discord 视频通知机器人
 
 没错，又是涩涩 Discord 机器人。
 
 ## 主要功能
 - **定时爬取**: 自动检查 MissAV 最新视频。
 - **Discord 推送**: 发现新片时，自动发送到指定频道。
-- **完全指令复刻**:
+- **机器人指令**:
   - `/subscribe`: 订阅全部/演员/标签。
   - `/unsubscribe`: 取消订阅。
   - `/list`: 管理我的订阅。
