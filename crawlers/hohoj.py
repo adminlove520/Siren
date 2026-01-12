@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 class HohoJCrawler(BaseCrawler):
     def __init__(self):
         super().__init__(base_url="https://hohoj.tv")
+        self.source_name = "HohoJ"
 
     async def crawl_new_videos(self, pages=1):
         # HohoJ doesn't seem to have a simple 'new' page like MissAV

@@ -19,11 +19,12 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 CHANNEL_ID = int(os.getenv('DISCORD_CHANNEL_ID', 0))
 
-class MissAvBot(commands.Bot):
+class SirenBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(command_prefix="!", intents=intents)
+        self.owner_ids = {1389282563121741904} # Set user as owner
         self.db = Database("data/missav.db")
         self.crawler = MissavCrawler()
         self.check_interval = int(os.getenv('CHECK_INTERVAL', 15)) # Minutes
@@ -69,14 +70,34 @@ class MissAvBot(commands.Bot):
         embed.add_field(name="时长", value=f"{video.get('duration', 'N/A')} 分钟", inline=True)
         embed.add_field(name="演员", value=video.get('actresses', 'N/A'), inline=False)
         embed.add_field(name="标签", value=video.get('tags', 'N/A'), inline=False)
+        embed.add_field(name="来源", value=video.get('source', 'Siren Internal'), inline=True)
         
         if video.get('cover_url'):
             embed.set_image(url=video.get('cover_url'))
             
-        embed.set_footer(text=f"MissAV 通知系统 • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        embed.set_footer(text=f"Siren 综合影视系统 • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         return embed
 
-bot = MissAvBot()
+    async def on_message(self, message):
+        if message.author.bot:
+            return
+        await self.process_commands(message)
+
+bot = SirenBot()
+
+@bot.command(name="siren-sync")
+@commands.is_owner()
+async def sync(ctx):
+    """强制同步 Slash Commands (仅限 Bot 所有者)"""
+    await ctx.send("🔄 正在强制同步 Slash Commands...")
+    try:
+        await bot.tree.sync()
+        if ctx.guild:
+            bot.tree.copy_global_to(guild=ctx.guild)
+            await bot.tree.sync(guild=ctx.guild)
+        await ctx.send("✅ 指令同步完成！请完全重启 Discord 客户端或稍候片刻。")
+    except Exception as e:
+        await ctx.send(f"❌ 同步失败: {e}")
 
 @bot.tree.command(name="help", description="查看帮助信息")
 async def help(interaction: discord.Interaction):

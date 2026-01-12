@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 class JableCrawler(BaseCrawler):
     def __init__(self):
         super().__init__(base_url="https://jable.tv")
+        self.source_name = "Jable"
         self.CODE_PATTERN = re.compile(r'([A-Z]+-\d+)', re.IGNORECASE)
 
     async def crawl_new_videos(self, pages=1):
@@ -45,6 +46,7 @@ class JableCrawler(BaseCrawler):
         if code_tag:
             video['code'] = code_tag.get_text(strip=True).upper()
             
+        video['source'] = self.source_name
         return video
 
     async def search(self, keyword, limit=5):
@@ -81,4 +83,5 @@ class JableCrawler(BaseCrawler):
         if hls_match:
             video['preview_url'] = hls_match.group(1)
             
+        video['source'] = self.source_name
         return video

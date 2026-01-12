@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 class MissavCrawler(BaseCrawler):
     def __init__(self):
         super().__init__(base_url="https://missav.ai")
+        self.source_name = "MissAV"
         self.CODE_PATTERN = re.compile(r'([A-Z]+-\d+)', re.IGNORECASE)
 
     async def crawl_new_videos(self, pages=1):
@@ -36,9 +37,18 @@ class MissavCrawler(BaseCrawler):
             href = link_tag['href']
             video['detail_url'] = href if href.startswith('http') else f"{self.base_url}{href}"
             
-        title_tag = card.find(['h3', 'h4', 'p'])
-        if title_tag:
-            video['title'] = title_tag.get_text(strip=True)
+            # Fallback title extraction
+            video['title'] = link_tag.get('title') or ""
+            if not video['title']:
+                title_tag = card.find(['h3', 'h4', 'p'])
+                if title_tag:
+                    video['title'] = title_tag.get_text(strip=True)
+                else:
+                    img_tag = card.find('img')
+                    if img_tag:
+                        video['title'] = img_tag.get('alt') or ""
+            
+            video['title'] = video['title'].strip()
             
         code_match = self.CODE_PATTERN.search(video.get('title', ''))
         if not code_match and 'detail_url' in video:
@@ -51,6 +61,7 @@ class MissavCrawler(BaseCrawler):
         if img_tag:
             video['cover_url'] = img_tag.get('data-src') or img_tag.get('src')
             
+        video['source'] = self.source_name
         return video
 
     async def search(self, keyword, limit=5):
@@ -77,13 +88,21 @@ class MissavCrawler(BaseCrawler):
         video = {'detail_url': url}
         
         title_el = soup.find('h1')
-        if title_el: video['title'] = title_el.get_text(strip=True)
+        if title_el: 
+            video['title'] = title_el.get_text(strip=True)
+        else:
+            logger.warning("Could not find <h1> title on page: %s", url)
+            # Try a fallback for title
+            og_title = soup.find('meta', property='og:title')
+            if og_title:
+                video['title'] = og_title.get('content')
         
         code_match = self.CODE_PATTERN.search(video.get('title', ''))
         video['code'] = code_match.group(1).upper() if code_match else None
         
         actress_tags = soup.select('a[href*="/actresses/"]')
-        video['actresses'] = ", ".join([a.get_text(strip=True) for a in actress_tags])
+        actresses = [a.get_text(strip=True) for a in actress_tags if "女优排行" not in a.get_text()]
+        video['actresses'] = ", ".join(actresses)
         
         tag_tags = soup.select('a[href*="/genres/"]')
         video['tags'] = ", ".join([t.get_text(strip=True) for t in tag_tags])
@@ -95,4 +114,5 @@ class MissavCrawler(BaseCrawler):
         if video_tag:
             video['preview_url'] = video_tag.get('src') or video_tag.get('data-src')
             
+        video['source'] = self.source_name
         return video
