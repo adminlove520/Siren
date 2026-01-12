@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'Siren/**'
+      - '**'
   workflow_dispatch:
 
 jobs:
@@ -21,17 +21,17 @@ jobs:
       - name: Get current version
         id: current_version
         run: |
-          VERSION=$(cat Siren/VERSION)
+          VERSION=$(cat VERSION)
           echo "old_version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Calculate new version
         id: new_version
         run: |
-          VERSION=$(cat Siren/VERSION)
+          VERSION=$(cat VERSION)
           IFS='.' read -r major minor patch <<< "$VERSION"
           new_patch=$((patch + 1))
           NEW_VERSION="$major.$minor.$new_patch"
-          echo $NEW_VERSION > Siren/VERSION
+          echo $NEW_VERSION > VERSION
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Update Changelog
@@ -39,12 +39,12 @@ jobs:
           DATE=$(date +%Y-%m-%d)
           VERSION=${{ steps.new_version.outputs.version }}
           # Simple changelog update logic
-          sed -i "s/## \[Unreleased\]/## [$VERSION] - $DATE/g" Siren/CHANGELOG.md || true
+          sed -i "s/## \[Unreleased\]/## [$VERSION] - $DATE/g" CHANGELOG.md || true
 
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add Siren/VERSION Siren/CHANGELOG.md
+          git add VERSION CHANGELOG.md
           git commit -m "chore: bump version to ${{ steps.new_version.outputs.version }}"
           git push
