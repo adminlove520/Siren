@@ -17,9 +17,10 @@ class CrawlerManager:
         ]
 
     async def init_session(self):
-        # We could initialize sessions for all, but typically they 
-        # initialize on first request or have a warm-up.
-        pass
+        # Warm up all crawlers (visit homepage, set cookies)
+        tasks = [crawler.warm_up() for crawler in self.crawlers]
+        await asyncio.gather(*tasks)
+        logger.info("All crawlers warmed up.")
 
     async def crawl_new_videos(self, pages=1):
         # By default, we use MissAV for the main "new videos" feed

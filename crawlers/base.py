@@ -10,8 +10,21 @@ class BaseCrawler:
         self.base_url = base_url
         self.user_agent = user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         self.session = AsyncSession(
-            impersonate="chrome120",
-            timeout=30.0
+            impersonate="chrome110",
+            timeout=30.0,
+            headers={
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Cache-Control": "max-age=0",
+                "Sec-Ch-Ua": '"Chromium";v="110", "Not A(Brand";v="24", "Google Chrome";v="110"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"Windows"',
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1"
+            }
         )
 
     async def fetch_html(self, url, referer=None):
@@ -41,6 +54,14 @@ class BaseCrawler:
     async def crawl_video_detail(self, url):
         """Crawl full details of a video"""
         raise NotImplementedError
+
+    async def warm_up(self):
+        """Visit homepage to establish session/cookies"""
+        try:
+            logger.info("Warming up crawler for %s", self.base_url)
+            await self.fetch_html(self.base_url)
+        except Exception as e:
+            logger.warning("Warm up failed for %s: %s", self.base_url, e)
 
     async def close(self):
         pass

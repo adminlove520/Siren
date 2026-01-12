@@ -149,6 +149,82 @@ async def crawl_code(interaction: discord.Interaction, code: str):
     else:
         await interaction.followup.send(f"❌ 未找到番号: {code}")
 
+@bot.tree.command(name="subscribe", description="订阅全部新片")
+async def subscribe(interaction: discord.Interaction):
+    bot.db.subscribe(interaction.user.id, "USER", "ALL")
+    await interaction.response.send_message("✅ 已开启全部新片订阅通知！")
+
+@bot.tree.command(name="subscribe_actress", description="订阅指定演员")
+@app_commands.describe(name="演员姓名")
+async def subscribe_actress(interaction: discord.Interaction, name: str):
+    bot.db.subscribe(interaction.user.id, "USER", "ACTRESS", name)
+    await interaction.response.send_message(f"✅ 已订阅演员: {name}。有新作会立即通知你！")
+
+@bot.tree.command(name="subscribe_tag", description="订阅指定标签")
+@app_commands.describe(tag="标签名称")
+async def subscribe_tag(interaction: discord.Interaction, tag: str):
+    bot.db.subscribe(interaction.user.id, "USER", "TAG", tag)
+    await interaction.response.send_message(f"✅ 已订阅标签: {tag}。有相关作品会立即通知你！")
+
+@bot.tree.command(name="unsubscribe", description="取消全部订阅")
+async def unsubscribe(interaction: discord.Interaction):
+    bot.db.unsubscribe(interaction.user.id)
+    await interaction.response.send_message("🔕 已取消所有订阅通知。")
+
+@bot.tree.command(name="list", description="查看当前订阅")
+async def list_subs(interaction: discord.Interaction):
+    subs = bot.db.get_subscriptions(interaction.user.id)
+    if not subs:
+        await interaction.response.send_message("你目前还没有任何订阅。")
+        return
+    
+    lines = ["📋 **你的订阅列表:**"]
+    for s in subs:
+        if s['type'] == 'ALL':
+            lines.append("- 全部新片推送")
+        else:
+            lines.append(f"- {s['type']}: {s['keyword']}")
+    
+    await interaction.response.send_message("\n".join(lines))
+
+@bot.tree.command(name="crawl_actor", description="手动爬取演员作品")
+@app_commands.describe(name="演员姓名", limit="爬取数量 (默认 10)")
+async def crawl_actor(interaction: discord.Interaction, name: str, limit: int = 10):
+    await interaction.response.defer()
+    results = await bot.crawler.search(name, limit=limit)
+    if not results:
+        await interaction.followup.send(f"❌ 未找到演员 {name} 的作品。")
+        return
+    
+    count = 0
+    for v in results:
+        if not bot.db.is_video_exists(v['code']):
+            detail = await bot.crawler.crawl_video_detail(v['detail_url'])
+            if detail: v.update(detail)
+            bot.db.save_video(v)
+            count += 1
+            
+    await interaction.followup.send(f"✅ 爬取完成！共为演员 {name} 更新了 {count} 部作品。")
+
+@bot.tree.command(name="crawl_search", description="手动搜索爬取")
+@app_commands.describe(keyword="关键词", limit="爬取数量 (默认 10)")
+async def crawl_search(interaction: discord.Interaction, keyword: str, limit: int = 10):
+    await interaction.response.defer()
+    results = await bot.crawler.search(keyword, limit=limit)
+    if not results:
+        await interaction.followup.send(f"❌ 未找到关键词 {keyword} 的相关视频。")
+        return
+    
+    count = 0
+    for v in results:
+        if not bot.db.is_video_exists(v['code']):
+            detail = await bot.crawler.crawl_video_detail(v['detail_url'])
+            if detail: v.update(detail)
+            bot.db.save_video(v)
+            count += 1
+            
+    await interaction.followup.send(f"✅ 爬取完成！共为关键词 {keyword} 更新了 {count} 个视频。")
+
 if __name__ == "__main__":
     if not TOKEN:
         print("Error: DISCORD_TOKEN not found in .env")
