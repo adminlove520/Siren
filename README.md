@@ -1,6 +1,6 @@
-# Siren - Discord 视频通知机器人
-
-没错，又是涩涩 Discord 机器人。
+## 📖 项目文档
+- [🛠️ 配置指南](docs/config_guide.md): 如何获取 Token 并启动机器人。
+- [📖 使用手册](docs/usage_manual.md): 指令说明与功能介绍。
 
 ## 主要功能
 - **定时爬取**: 自动检查 MissAV 最新视频。

@@ -11,11 +11,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖并安装
-COPY MissAvPuser/requirements.txt .
+COPY Siren/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 复制项目文件
-COPY MissAvPuser/ .
+COPY Siren/ .
 
 # 创建数据目录
 RUN mkdir -p /app/data
