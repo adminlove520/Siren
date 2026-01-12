@@ -24,7 +24,6 @@ class SirenBot(commands.Bot):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(command_prefix="!", intents=intents)
-        self.owner_ids = {1389282563121741904} # Set user as owner
         self.db = Database("data/missav.db")
         self.crawler = MissavCrawler()
         self.check_interval = int(os.getenv('CHECK_INTERVAL', 15)) # Minutes
@@ -86,9 +85,9 @@ class SirenBot(commands.Bot):
 bot = SirenBot()
 
 @bot.command(name="siren-sync")
-@commands.is_owner()
+@commands.has_permissions(administrator=True)
 async def sync(ctx):
-    """强制同步 Slash Commands (仅限 Bot 所有者)"""
+    """强制同步 Slash Commands (仅限管理员)"""
     await ctx.send("🔄 正在强制同步 Slash Commands...")
     try:
         await bot.tree.sync()
