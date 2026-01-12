@@ -119,23 +119,21 @@ async def latest(interaction: discord.Interaction, count: int = 5):
 
 @bot.tree.command(name="status", description="查看机器人状态")
 async def status(interaction: discord.Interaction):
-    videos = bot.db.get_latest_videos(limit=1)
-    status_text = f"🤖 **机器人状态**\n\n✅ 运行中\n📊 已记录视频数: (查询中...)\n⏰ 检查频率: {bot.check_interval} 分钟"
+    crawler_count = len(bot.crawler.crawlers)
+    status_text = f"🤖 **机器人状态**\n\n✅ 运行中\n📡 活跃数据源: {crawler_count} 个\n⏰ 检查频率: {bot.check_interval} 分钟"
     await interaction.response.send_message(status_text)
 
-@bot.tree.command(name="search", description="搜索视频")
-@app_commands.describe(keyword="关键词")
+@bot.tree.command(name="search", description="全网搜索视频")
+@app_commands.describe(keyword="关键词 (支持番号或名称)")
 async def search(interaction: discord.Interaction, keyword: str):
     await interaction.response.defer()
-    # For now, searching crawled data or triggering search crawl
-    videos = await bot.crawler.crawl_new_videos(pages=1) # Simplified search logic for demo
-    results = [v for v in videos if keyword.lower() in v.get('title', '').lower() or keyword.upper() in v.get('code', '')]
+    results = await bot.crawler.search(keyword, limit=5)
     
     if not results:
-        await interaction.followup.send(f"🔍 未找到相关视频: {keyword}")
+        await interaction.followup.send(f"🔍 全网未找到相关视频: {keyword}")
         return
         
-    for v in results[:5]:
+    for v in results:
         embed = bot.create_video_embed(v)
         await interaction.followup.send(embed=embed)
 

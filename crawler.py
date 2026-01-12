@@ -1,140 +1,66 @@
 import asyncio
-from curl_cffi.requests import AsyncSession
-from bs4 import BeautifulSoup
-import re
 import logging
-import random
-from datetime import datetime
+from .crawlers.missav import MissavCrawler
+from .crawlers.jable import JableCrawler
+from .crawlers.hohoj import HohoJCrawler
+from .crawlers.memo import MemoCrawler
 
 logger = logging.getLogger(__name__)
 
-class MissavCrawler:
-    BASE_URL = "https://missav.ai"
-    NEW_VIDEOS_URL = f"{BASE_URL}/new"
-    
-    CODE_PATTERN = re.compile(r'([A-Z]+-\d+)', re.IGNORECASE)
-    
-    def __init__(self, user_agent=None):
-        self.user_agent = user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-        self.session = AsyncSession(
-            impersonate="chrome120",
-            follow_redirects=True,
-            timeout=30.0
-        )
+class CrawlerManager:
+    def __init__(self):
+        self.crawlers = [
+            MissavCrawler(),
+            JableCrawler(),
+            HohoJCrawler(),
+            MemoCrawler()
+        ]
 
     async def init_session(self):
-        """Warm up session to handle anti-bot"""
-        try:
-            for _ in range(2):
-                response = await self.session.get(f"{self.NEW_VIDEOS_URL}?page=2")
-                # curl_cffi handles cookies automatically in the session
-                await asyncio.sleep(random.uniform(1, 2))
-            logger.info("Session initialized successfully")
-        except Exception as e:
-            logger.warning("Failed to initialize session: %s", e)
-
-    async def fetch_html(self, url):
-        await asyncio.sleep(random.uniform(1, 2))
-        try:
-            response = await self.session.get(url)
-            if response.status_code == 200:
-                return response.text
-            logger.warn("Fetch failed: %s status %d", url, response.status_code)
-        except Exception as e:
-            logger.error("Error fetching %s: %s", url, e)
-        return None
-
-    def parse_video_card(self, card):
-        video = {}
-        # Detail link
-        link_tag = card.find('a', href=True)
-        if link_tag:
-            href = link_tag['href']
-            video['detail_url'] = href if href.startswith('http') else f"{self.BASE_URL}{href}"
-            
-        # Title
-        title_tag = card.find(['h3', 'h4', 'p'])
-        if title_tag:
-            video['title'] = title_tag.get_text(strip=True)
-            
-        # Extract code (番号)
-        code_match = self.CODE_PATTERN.search(video.get('title', ''))
-        if not code_match and 'detail_url' in video:
-            code_match = self.CODE_PATTERN.search(video['detail_url'])
-        
-        if code_match:
-            video['code'] = code_match.group(1).upper()
-        else:
-            # Fallback for code extraction from URL
-            if 'detail_url' in video:
-                parts = video['detail_url'].split('/')
-                last_part = parts[-1] if parts[-1] else parts[-2]
-                video['code'] = last_part.upper()
-
-        # Cover image
-        img_tag = card.find('img')
-        if img_tag:
-            video['cover_url'] = img_tag.get('data-src') or img_tag.get('src')
-            
-        return video
+        # We could initialize sessions for all, but typically they 
+        # initialize on first request or have a warm-up.
+        pass
 
     async def crawl_new_videos(self, pages=1):
-        all_videos = []
-        for page in range(1, pages + 1):
-            url = f"{self.NEW_VIDEOS_URL}?page={page}" if page > 1 else self.NEW_VIDEOS_URL
-            html = await self.fetch_html(url)
-            if not html:
-                continue
-                
-            soup = BeautifulSoup(html, 'html.parser')
-            # Look for video cards (the markers might vary, adjusting based on Java logic)
-            cards = soup.select('div.group') or soup.select('div.video-card')
-            
-            page_videos = []
-            for card in cards:
-                video = self.parse_video_card(card)
-                if video.get('code'):
-                    page_videos.append(video)
-            
-            all_videos.extend(page_videos)
-            logger.info("Crawled page %d, found %d videos", page, len(page_videos))
-            
-        return all_videos
+        # By default, we use MissAV for the main "new videos" feed
+        # but we could merge from others later.
+        main_crawler = self.crawlers[0] # Missav
+        return await main_crawler.crawl_new_videos(pages=pages)
 
-    async def crawl_video_detail(self, url):
-        html = await self.fetch_html(url)
-        if not html: return None
+    async def search(self, keyword, limit=5):
+        tasks = [crawler.search(keyword, limit=limit) for crawler in self.crawlers]
+        results = await asyncio.gather(*tasks)
         
-        soup = BeautifulSoup(html, 'html.parser')
-        video = {'detail_url': url}
+        # Merge results and deduplicate by code
+        merged = {}
+        for res_list in results:
+            for video in res_list:
+                code = video.get('code')
+                if code and code not in merged:
+                    merged[code] = video
         
-        # Title
-        title_el = soup.find('h1')
-        if title_el: video['title'] = title_el.get_text(strip=True)
-        
-        # Code
-        video['code'] = self.CODE_PATTERN.search(video.get('title', '')).group(1).upper() if self.CODE_PATTERN.search(video.get('title', '')) else None
-        
-        # Actresses
-        actress_tags = soup.select('a[href*="/actresses/"]')
-        video['actresses'] = ", ".join([a.get_text(strip=True) for a in actress_tags])
-        
-        # Tags
-        tag_tags = soup.select('a[href*="/genres/"]')
-        video['tags'] = ", ".join([t.get_text(strip=True) for t in tag_tags])
-        
-        # Duration
-        match = re.search(r'(\d+)\s*分', html)
-        video['duration'] = int(match.group(1)) if match else None
-        
-        # Preview
-        video_tag = soup.find('video')
-        if video_tag:
-            video['preview_url'] = video_tag.get('src') or video_tag.get('data-src')
-            
-        return video
+        return list(merged.values())[:limit]
+
+    async def crawl_video_detail(self, url_or_code):
+        if url_or_code.startswith('http'):
+            for crawler in self.crawlers:
+                if crawler.base_url in url_or_code:
+                    return await crawler.crawl_video_detail(url_or_code)
+        else:
+            # Code search: try to find the video detail from any source
+            code = url_or_code.upper()
+            search_results = await self.search(code, limit=1)
+            if search_results:
+                video = search_results[0]
+                detail = await self.crawl_video_detail(video['detail_url'])
+                if detail:
+                    video.update(detail)
+                return video
+        return None
 
     async def close(self):
-        # AsyncSession in curl_cffi doesn't need explicit aclose in all versions, 
-        # but it's good practice if supported.
-        pass
+        for crawler in self.crawlers:
+            await crawler.close()
+
+# For backward compatibility
+MissavCrawler = CrawlerManager

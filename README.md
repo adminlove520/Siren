@@ -3,6 +3,7 @@
 - [📖 使用手册](docs/usage_manual.md): 指令说明与功能介绍。
 
 ## 主要功能
+- **多源支持**: 同时支持 MissAV, Jable, HohoJ, MemoJav 等多个数据源。
 - **定时爬取**: 自动检查 MissAV 最新视频。
 - **Discord 推送**: 发现新片时，自动发送到指定频道。
 - **机器人指令**:
