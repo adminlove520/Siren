@@ -1,0 +1,5 @@
+discord.py
+httpx
+beautifulsoup4
+python-dotenv
+apscheduler
