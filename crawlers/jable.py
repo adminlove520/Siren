@@ -1,7 +1,7 @@
 import re
 import logging
 from bs4 import BeautifulSoup
-from .base import BaseCrawler
+from crawlers.base import BaseCrawler
 
 logger = logging.getLogger(__name__)
 

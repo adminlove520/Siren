@@ -1,9 +1,9 @@
 import asyncio
 import logging
-from .crawlers.missav import MissavCrawler
-from .crawlers.jable import JableCrawler
-from .crawlers.hohoj import HohoJCrawler
-from .crawlers.memo import MemoCrawler
+from crawlers.missav import MissavCrawler
+from crawlers.jable import JableCrawler
+from crawlers.hohoj import HohoJCrawler
+from crawlers.memo import MemoCrawler
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ import re
 import logging
 import json
 from urllib.parse import unquote
-from .base import BaseCrawler
+from crawlers.base import BaseCrawler
 
 logger = logging.getLogger(__name__)
 
