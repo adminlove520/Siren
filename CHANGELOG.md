@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.0.14] - 2026-01-12
 ### Fixed
 - 修复 MissAV 时长解析逻辑，支持秒转分钟。
 - 修复 Jable 时长解析，从列表页卡片提取。
