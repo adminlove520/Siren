@@ -19,16 +19,22 @@ class BaseCrawler:
             }
         )
 
-    async def fetch_html(self, url, referer=None):
-        await asyncio.sleep(random.uniform(1, 2))
-        try:
-            headers = {"Referer": referer} if referer else {}
-            response = await self.session.get(url, headers=headers, allow_redirects=True)
-            if response.status_code == 200:
-                return response.text
-            logger.warning("Fetch failed: %s status %d", url, response.status_code)
-        except Exception as e:
-            logger.error("Error fetching %s: %s", url, e)
+    async def fetch_html(self, url, referer=None, retries=2):
+        for i in range(retries + 1):
+            await asyncio.sleep(random.uniform(1.5, 3))
+            try:
+                headers = {"Referer": referer} if referer else {}
+                response = await self.session.get(url, headers=headers, allow_redirects=True)
+                if response.status_code == 200:
+                    return response.text
+                logger.warning("Fetch failed (Try %d/%d): %s status %d", i+1, retries+1, url, response.status_code)
+            except Exception as e:
+                logger.error("Error fetching (Try %d/%d) %s: %s", i+1, retries+1, url, e)
+                if "56" in str(e) or "reset" in str(e).lower():
+                    # If connection reset, maybe change impersonation for this domain?
+                    # For now just wait and retry
+                    await asyncio.sleep(2)
+                    continue
         return None
 
     def parse_video_card(self, card):
