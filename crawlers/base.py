@@ -11,7 +11,6 @@ class BaseCrawler:
         self.user_agent = user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         self.session = AsyncSession(
             impersonate="chrome120",
-            follow_redirects=True,
             timeout=30.0
         )
 
@@ -19,7 +18,7 @@ class BaseCrawler:
         await asyncio.sleep(random.uniform(1, 2))
         try:
             headers = {"Referer": referer} if referer else {}
-            response = await self.session.get(url, headers=headers)
+            response = await self.session.get(url, headers=headers, allow_redirects=True)
             if response.status_code == 200:
                 return response.text
             logger.warning("Fetch failed: %s status %d", url, response.status_code)
