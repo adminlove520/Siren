@@ -137,12 +137,11 @@ async def search(interaction: discord.Interaction, keyword: str):
         embed = bot.create_video_embed(v)
         await interaction.followup.send(embed=embed)
 
-@bot.tree.command(name="crawl_code", description="手动爬取特定番号")
+@bot.tree.command(name="crawl_code", description="手动爬取特定番号 (全网搜)")
 @app_commands.describe(code="番号 (如 SSIS-001)")
 async def crawl_code(interaction: discord.Interaction, code: str):
     await interaction.response.defer()
-    url = f"https://missav.ai/{code}"
-    video = await bot.crawler.crawl_video_detail(url)
+    video = await bot.crawler.crawl_video_detail(code) # Now it will search all sources
     if video:
         bot.db.save_video(video)
         embed = bot.create_video_embed(video)

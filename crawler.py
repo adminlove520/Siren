@@ -1,19 +1,19 @@
 import asyncio
 import logging
-from crawlers.missav import MissavCrawler
-from crawlers.jable import JableCrawler
-from crawlers.hohoj import HohoJCrawler
-from crawlers.memo import MemoCrawler
+from crawlers.missav import MissavCrawler as Missav
+from crawlers.jable import JableCrawler as Jable
+from crawlers.hohoj import HohoJCrawler as HohoJ
+from crawlers.memo import MemoCrawler as Memo
 
 logger = logging.getLogger(__name__)
 
 class CrawlerManager:
     def __init__(self):
         self.crawlers = [
-            MissavCrawler(),
-            JableCrawler(),
-            HohoJCrawler(),
-            MemoCrawler()
+            Missav(),
+            Jable(),
+            HohoJ(),
+            Memo()
         ]
 
     async def init_session(self):
