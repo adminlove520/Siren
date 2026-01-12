@@ -1,5 +1,5 @@
 import asyncio
-import httpx
+from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
 import re
 import logging
@@ -15,29 +15,28 @@ class MissavCrawler:
     CODE_PATTERN = re.compile(r'([A-Z]+-\d+)', re.IGNORECASE)
     
     def __init__(self, user_agent=None):
-        self.user_agent = user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        self.client = httpx.AsyncClient(
-            headers={"User-Agent": self.user_agent},
+        self.user_agent = user_agent or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        self.session = AsyncSession(
+            impersonate="chrome120",
             follow_redirects=True,
             timeout=30.0
         )
-        self.cookies = {}
 
     async def init_session(self):
         """Warm up session to handle anti-bot"""
         try:
             for _ in range(2):
-                response = await self.client.get(f"{self.NEW_VIDEOS_URL}?page=2")
-                self.cookies.update(response.cookies)
+                response = await self.session.get(f"{self.NEW_VIDEOS_URL}?page=2")
+                # curl_cffi handles cookies automatically in the session
                 await asyncio.sleep(random.uniform(1, 2))
-            logger.info("Session initialized with cookies: %s", self.cookies)
+            logger.info("Session initialized successfully")
         except Exception as e:
             logger.warning("Failed to initialize session: %s", e)
 
     async def fetch_html(self, url):
-        await asyncio.sleep(random.uniform(1, 3))
+        await asyncio.sleep(random.uniform(1, 2))
         try:
-            response = await self.client.get(url, cookies=self.cookies)
+            response = await self.session.get(url)
             if response.status_code == 200:
                 return response.text
             logger.warn("Fetch failed: %s status %d", url, response.status_code)
@@ -136,4 +135,6 @@ class MissavCrawler:
         return video
 
     async def close(self):
-        await self.client.aclose()
+        # AsyncSession in curl_cffi doesn't need explicit aclose in all versions, 
+        # but it's good practice if supported.
+        pass

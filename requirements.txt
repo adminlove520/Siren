@@ -3,3 +3,5 @@ httpx
 beautifulsoup4
 python-dotenv
 apscheduler
+PyNaCl
+curl_cffi
