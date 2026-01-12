@@ -74,7 +74,7 @@ class SirenBot(commands.Bot):
         if video.get('cover_url'):
             embed.set_image(url=video.get('cover_url'))
             
-        embed.set_footer(text=f"Siren 综合影视系统 • {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        embed.set_footer(text=f"Siren 东方隐侠安全客栈（品茗抚琴焚香听雨对弈）\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         return embed
 
     async def on_message(self, message):

@@ -46,8 +46,22 @@ class JableCrawler(BaseCrawler):
         if code_tag:
             video['code'] = code_tag.get_text(strip=True).upper()
             
+        # Jable often has duration in span.label
+        duration_tag = card.find('span', class_='label')
+        if duration_tag:
+            video['duration'] = self._parse_duration_string(duration_tag.get_text(strip=True))
+            
         video['source'] = self.source_name
         return video
+
+    def _parse_duration_string(self, s):
+        """Convert HH:MM:SS or MM:SS to minutes"""
+        parts = s.split(':')
+        if len(parts) == 3: # HH:MM:SS
+            return int(parts[0]) * 60 + int(parts[1])
+        elif len(parts) == 2: # MM:SS
+            return int(parts[0])
+        return None
 
     async def search(self, keyword, limit=5):
         # Jable search URL: https://jable.tv/search/keyword/
@@ -83,5 +97,38 @@ class JableCrawler(BaseCrawler):
         if hls_match:
             video['preview_url'] = hls_match.group(1)
             
+        # Enhanced duration extraction for Jable
+        duration_minutes = None
+        # Priority 1: Metadata
+        meta_duration = soup.find('meta', attrs={'property': 'og:video:duration'}) or \
+                        soup.find('meta', attrs={'itemprop': 'duration'}) or \
+                        soup.find('meta', attrs={'name': 'twitter:data2'}) # Some sites use this
+        if meta_duration:
+            content = meta_duration.get('content', '') or meta_duration.get('value', '')
+            num_match = re.search(r'(\d+)', content)
+            if num_match:
+                val = int(num_match.group(1))
+                # Jable meta tags are often in seconds
+                duration_minutes = val // 60 if val > 500 else val
+        
+        # Priority 2: Script tags (Jable often has video info in scripts)
+        if not duration_minutes:
+            script_match = re.search(r'duration\s*:\s*(\d+)', html, re.IGNORECASE)
+            if script_match:
+                val = int(script_match.group(1))
+                duration_minutes = val // 60 if val > 500 else val
+                
+        # Priority 3: Text regex fallback
+        if not duration_minutes:
+            duration_match = re.search(r'(\d+)\s*(分|min)', html)
+            if duration_match:
+                duration_minutes = int(duration_match.group(1))
+            else:
+                # Try finding HH:MM:SS or MM:SS pattern
+                time_match = re.search(r'(\d{1,2}:\d{2}(:\d{2})?)', html)
+                if time_match:
+                    duration_minutes = self._parse_duration_string(time_match.group(1))
+        
+        video['duration'] = duration_minutes
         video['source'] = self.source_name
         return video

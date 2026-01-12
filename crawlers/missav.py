@@ -107,8 +107,37 @@ class MissavCrawler(BaseCrawler):
         tag_tags = soup.select('a[href*="/genres/"]')
         video['tags'] = ", ".join([t.get_text(strip=True) for t in tag_tags])
         
-        duration_match = re.search(r'(\d+)\s*分', html)
-        video['duration'] = int(duration_match.group(1)) if duration_match else None
+        # Enhanced duration extraction for MissAV
+        duration_minutes = None
+        
+        # Priority 1: Meta tags (MissAV often uses seconds in og:video:duration)
+        meta_duration = soup.find('meta', attrs={'property': 'og:video:duration'}) or \
+                        soup.find('meta', attrs={'itemprop': 'duration'})
+        if meta_duration:
+            content = meta_duration.get('content', '')
+            num_match = re.search(r'(\d+)', content)
+            if num_match:
+                seconds = int(num_match.group(1))
+                # MissAV duration in meta is usually seconds
+                if seconds > 500: # Highly likely to be seconds
+                    duration_minutes = seconds // 60
+                else:
+                    duration_minutes = seconds
+        
+        # Priority 2: Try finding in the text directly (e.g., "120 分" or "120 min")
+        if not duration_minutes:
+            duration_match = re.search(r'(\d+)\s*(分|min)', html)
+            if duration_match:
+                duration_minutes = int(duration_match.group(1))
+            else:
+                # Fallback: Look for span with specific patterns
+                span_match = soup.find('span', string=re.compile(r'\d+\s*(分|min)'))
+                if span_match:
+                    duration_res = re.search(r'(\d+)', span_match.get_text())
+                    if duration_res:
+                        duration_minutes = int(duration_res.group(1))
+
+        video['duration'] = duration_minutes
         
         video_tag = soup.find('video')
         if video_tag:
