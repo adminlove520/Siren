@@ -24,7 +24,7 @@ class MissAvBot(commands.Bot):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(command_prefix="!", intents=intents)
-        self.db = Database("missav.db")
+        self.db = Database("data/missav.db")
         self.crawler = MissavCrawler()
         self.check_interval = int(os.getenv('CHECK_INTERVAL', 15)) # Minutes
 

@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import os
 from datetime import datetime
 from threading import Lock
 
@@ -8,6 +9,12 @@ logger = logging.getLogger(__name__)
 class Database:
     def __init__(self, db_path="missav.db"):
         self.db_path = db_path
+        # Ensure the directory for the database file exists
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+            logger.info("Created database directory: %s", db_dir)
+            
         self._lock = Lock()
         self.init_db()
 

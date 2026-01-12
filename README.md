@@ -41,4 +41,5 @@
 - `bot.py`: 机器人入口及指令逻辑。
 - `crawler.py`: 异步爬虫逻辑。
 - `database.py`: SQLite 数据存储逻辑。
-- `missav.db`: 自动生成的数据库文件。
+- `data/`: 持久化数据目录（建议挂载卷）。
+- `data/missav.db`: 自动生成的数据库文件。

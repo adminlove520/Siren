@@ -48,8 +48,11 @@ pip install -r requirements.txt
 python bot.py
 ```
 
-### Docker 运行
-```bash
-docker build -t siren .
-docker run -d --env-file .env siren
-```
+### Zeabur 部署
+1.  在 Zeabur 开启 **Watch Image Update** (监听镜像更新)。
+2.  填写镜像：`ghcr.io/你的用户名/Siren:latest`。
+3.  **持久化配置 (重要)**：
+    - 在 Zeabur 服务页面的 **"Storage"** (存储) 选项中。
+    - 点击 **"Add Volume"** (添加卷)。
+    - 挂载路径填写 `/app/data`。
+    - 这样即使机器人重启，你的订阅记录和视频库也不会丢失。
